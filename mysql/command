@@ -1,0 +1,7 @@
+k create -f ./storage-class.yaml
+k create -f ./persistent-volume.yaml
+k create -f ./mysql-config.yaml
+k create -f ./mysql-init-config.yaml
+k create -f ./mysql-secret.yaml
+k create -f ./mysql-service.yaml
+k create -f ./mysql-statefulset.yaml

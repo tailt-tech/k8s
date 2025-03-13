@@ -1,0 +1,185 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: sports
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql
+  replicas: 3
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: mysql
+      labels:
+        app: mysql
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      nodeSelector:
+        env: production
+      initContainers:
+        - name: set-label
+          image: bitnami/kubectl
+          command:
+            - sh
+            - -c
+            - |
+              if [ "$(hostname | cut -d'-' -f2)" = "0" ]; then
+                kubectl label pod $(hostname) role=master -n sports --overwrite
+              else
+                kubectl label pod $(hostname) role=slave -n sports --overwrite
+              fi
+        - name: init-mysql
+          image: mysql:8
+          securityContext:
+            runAsUser: 0
+          command:
+            - /bin/bash
+            - -c
+            - |
+              # Check if MySQL data directory exists, and remove it if it does
+              if [ -d "/var/lib/mysql" ]; then
+                echo "Removing MySQL data directory..."
+                rm -rf /var/lib/mysql/*
+              else
+                mkdir -p /var/lib/mysql
+                echo "MySQL data directory does not exist. Skipping removal."
+              fi
+              chown -R 999:999 /var/lib/mysql
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+        - name: init-config
+          image: alpine:latest
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - "-c"
+            - |
+              set -ex
+              echo "Checking mounted directories:"
+              ls -l /mnt/
+              ls -l /mnt/config-map
+              ls -l /mnt/init-script
+              ordinal=$(hostname | awk -F'-' '{print $NF}')
+              mkdir -p /mnt/conf.d
+              mkdir -p /tmp/initdb.d
+              if [ "$ordinal" = "0" ]; then
+                echo "Creating master.cnf and init.sql"
+                cat /mnt/config-map/master.cnf > /mnt/conf.d/master.cnf
+                cat /mnt/init-script/init.sql > /tmp/initdb.d/init.sql
+              else
+                echo "Creating slave.cnf and init-replication.sql"
+                cat /mnt/config-map/slave.cnf > /mnt/conf.d/slave.cnf
+                cat /mnt/init-script/init-replication.sql > /tmp/initdb.d/init-replication.sql
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+            - name: conf
+              mountPath: /mnt/conf.d/
+            - name: config-map
+              mountPath: /mnt/config-map/master.cnf
+              subPath: master.cnf
+              readOnly: true
+            - name: config-map
+              mountPath: /mnt/config-map/slave.cnf
+              subPath: slave.cnf
+              readOnly: true
+            - name: init-script
+              mountPath: /mnt/init-script/init.sql
+              subPath: init.sql
+              readOnly: true
+            - name: init-script
+              mountPath: /mnt/init-script/init-replication.sql
+              subPath: init-replication.sql
+              readOnly: true
+            - name: entrypoint-initdb
+              mountPath: /tmp/initdb.d
+      containers:
+        - name: mysql
+          image: mysql:8
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "P@ssword"
+            - name: MYSQL_ROOT_HOST
+              value: "%"
+            - name: MYSQL_REPLICATION_PASSWORD
+              value: "Replic@"
+            - name: MYSQL_ALLOW_EMPTY_PASSWORD
+              value: "false"
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: mysql
+              containerPort: 3306
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+            - name: conf
+              mountPath: /etc/mysql/conf.d
+            - name: entrypoint-initdb
+              mountPath: /docker-entrypoint-initdb.d
+          args:
+            - --mysql-native-password=ON
+            - --bind-address=0.0.0.0
+            - --pid-file=/var/lib/mysql/mysql.pid
+          readinessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - "-h"
+                - "127.0.0.1"
+                - "--silent"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - "-h"
+                - "127.0.0.1"
+                - "--silent"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: conf
+          emptyDir: {}
+        - name: entrypoint-initdb
+          emptyDir: {}
+        - name: config-map
+          configMap:
+            name: mysql-config
+        - name: init-script
+          configMap:
+            name: mysql-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: local-storage
+        resources:
+          requests:
+            storage: 5Gi

@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-master
+  namespace: sports
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  persistentVolumeReclaimPolicy: Delete
+  local:
+    path: /mnt/data/mysql-master
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: env
+          operator: In
+          values:
+          - production
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-slave-0
+  namespace: sports
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  persistentVolumeReclaimPolicy: Delete
+  local:
+    path: /mnt/data/mysql-slave-0
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: env
+          operator: In
+          values:
+          - production
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-slave-1
+  namespace: sports
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  persistentVolumeReclaimPolicy: Delete
+  local:
+    path: /mnt/data/mysql-slave-1
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: env
+          operator: In
+          values:
+          - production

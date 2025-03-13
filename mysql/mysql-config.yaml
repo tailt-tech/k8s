@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: sports
+data:
+  master.cnf: |
+    [mysqld]
+    datadir=/var/lib/mysql
+    socket=/var/lib/mysql/mysql.sock
+    pid-file=/var/lib/mysql/mysql.pid
+    mysql-native-password=ON
+    server-id=1
+    log-bin=mysql-bin
+    sync_binlog=1
+    innodb_flush_log_at_trx_commit=1
+    binlog_do_db=sports_db
+    max_connections=1000
+    bind-address=0.0.0.0
+    read_only=0
+    super_read_only=0
+    log_replica_updates=1
+    enforce-gtid-consistency=ON
+    gtid-mode=ON
+    [client]
+    socket=/var/lib/mysql/mysql.sock
+  slave.cnf: |
+    [mysqld]
+    datadir=/var/lib/mysql
+    socket=/var/lib/mysql/mysql.sock
+    mysql-native-password=ON
+    server-id=2
+    relay-log=mysql-relay-bin
+    log-slave-updates=1
+    read_only=1
+    log_replica_updates=1
+    bind-address=0.0.0.0
+    max_connections=1000
+    replica_parallel_workers=4
+    replica_parallel_type=LOGICAL_CLOCK
+    enforce-gtid-consistency=ON
+    gtid-mode=ON
+    [client]
+    socket=/var/lib/mysql/mysql.sock
