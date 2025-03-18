@@ -9,8 +9,10 @@ data:
     datadir=/var/lib/mysql
     socket=/var/lib/mysql/mysql.sock
     pid-file=/var/lib/mysql/mysql.pid
-    mysql-native-password=ON
-    server-id=1
+    ssl-ca=/etc/mysql/ssl/ca-cert.pem
+    ssl-cert=/etc/mysql/ssl/server-cert.pem
+    ssl-key=/etc/mysql/ssl/server-key.pem
+    require_secure_transport=ON
     log-bin=mysql-bin
     sync_binlog=1
     innodb_flush_log_at_trx_commit=1
@@ -22,14 +24,18 @@ data:
     log_replica_updates=1
     enforce-gtid-consistency=ON
     gtid-mode=ON
+    character-set-server = utf8mb4
+    collation-server = utf8mb4_unicode_ci    
     [client]
     socket=/var/lib/mysql/mysql.sock
   slave.cnf: |
     [mysqld]
     datadir=/var/lib/mysql
     socket=/var/lib/mysql/mysql.sock
-    mysql-native-password=ON
-    server-id=2
+    ssl-ca=/etc/mysql/ssl/ca-cert.pem
+    ssl-cert=/etc/mysql/ssl/server-cert.pem
+    ssl-key=/etc/mysql/ssl/server-key.pem
+    require_secure_transport=ON
     relay-log=mysql-relay-bin
     log-slave-updates=1
     read_only=1
@@ -40,5 +46,7 @@ data:
     replica_parallel_type=LOGICAL_CLOCK
     enforce-gtid-consistency=ON
     gtid-mode=ON
+    character-set-server = utf8mb4
+    collation-server = utf8mb4_unicode_ci  
     [client]
     socket=/var/lib/mysql/mysql.sock

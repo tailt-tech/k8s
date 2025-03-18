@@ -77,7 +77,7 @@ spec:
               else
                 echo "Creating slave.cnf and init-replication.sql"
                 cat /mnt/config-map/slave.cnf > /mnt/conf.d/slave.cnf
-                cat /mnt/init-script/init-replication.sql > /tmp/initdb.d/init-replication.sql
+                cat /mnt/init-script/init-replication.sql > /tmp/initdb.d/init.sql
               fi
           volumeMounts:
             - name: data
@@ -110,7 +110,7 @@ spec:
               memory: "512Mi"
               cpu: "250m"
             limits:
-              memory: "512Mi"
+              memory: "1Gi"
               cpu: "500m"
           env:
             - name: MYSQL_ROOT_PASSWORD
@@ -125,6 +125,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: MYSQL_SSL_CA
+              value: /etc/mysql/ssl/ca-cert.pem
+            - name: MYSQL_SSL_CERT
+              value: /etc/mysql/ssl/server-cert.pem
+            - name: MYSQL_SSL_KEY
+              value: /etc/mysql/ssl/server-key.pem
           ports:
             - name: mysql
               containerPort: 3306
@@ -135,6 +141,9 @@ spec:
               mountPath: /etc/mysql/conf.d
             - name: entrypoint-initdb
               mountPath: /docker-entrypoint-initdb.d
+            - name: ssl-certificates
+              mountPath: /etc/mysql/ssl
+              readOnly: true
           args:
             - --mysql-native-password=ON
             - --bind-address=0.0.0.0
@@ -174,6 +183,9 @@ spec:
         - name: init-script
           configMap:
             name: mysql-init-script
+        - name: ssl-certificates
+          secret:
+            secretName: mysql-ssl
   volumeClaimTemplates:
     - metadata:
         name: data
