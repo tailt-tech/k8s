@@ -5,3 +5,11 @@ k create -f ./mysql-init-config.yaml
 k create -f ./mysql-secret.yaml
 k create -f ./mysql-service.yaml
 k create -f ./mysql-statefulset.yaml
+mysql -u root -p \
+  --ssl-mode=VERIFY_CA \
+  --ssl-ca=/var/lib/mysql-ssl/ca-cert.pem \
+  --ssl-cert=/var/lib/mysql-ssl/client-cert.pem \
+  --ssl-key=/var/lib/mysql-ssl/client-key.pem
+
+
+  P@ssword

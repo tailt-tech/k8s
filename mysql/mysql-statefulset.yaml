@@ -8,7 +8,7 @@ spec:
     matchLabels:
       app: mysql
   serviceName: mysql
-  replicas: 3
+  replicas: 1
   template:
     metadata:
       annotations:
@@ -107,30 +107,30 @@ spec:
           image: mysql:8
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "250m"
+              memory: 512Mi
+              cpu: 250m
             limits:
-              memory: "1Gi"
-              cpu: "500m"
+              memory: 1Gi
+              cpu: 500m
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: "P@ssword"
+              value: "P@ssword2025"
             - name: MYSQL_ROOT_HOST
               value: "%"
             - name: MYSQL_REPLICATION_PASSWORD
-              value: "Replic@"
+              value: "Replic@2025"
             - name: MYSQL_ALLOW_EMPTY_PASSWORD
-              value: "false"
+              value: "true"
             - name: HOSTNAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
             - name: MYSQL_SSL_CA
-              value: /etc/mysql/ssl/ca-cert.pem
+              value: /var/lib/mysql-ssl/ca-cert.pem
             - name: MYSQL_SSL_CERT
-              value: /etc/mysql/ssl/server-cert.pem
+              value: /var/lib/mysql-ssl/server-cert.pem
             - name: MYSQL_SSL_KEY
-              value: /etc/mysql/ssl/server-key.pem
+              value: /var/lib/mysql-ssl/server-key.pem
           ports:
             - name: mysql
               containerPort: 3306
@@ -142,10 +142,9 @@ spec:
             - name: entrypoint-initdb
               mountPath: /docker-entrypoint-initdb.d
             - name: ssl-certificates
-              mountPath: /etc/mysql/ssl
+              mountPath: /var/lib/mysql-ssl/
               readOnly: true
           args:
-            - --mysql-native-password=ON
             - --bind-address=0.0.0.0
             - --pid-file=/var/lib/mysql/mysql.pid
           readinessProbe:

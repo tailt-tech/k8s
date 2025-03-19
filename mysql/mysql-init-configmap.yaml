@@ -7,8 +7,9 @@ data:
   init.sql: |
     -- Check if 'root' user exists and alter if needed
     CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';
+    CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';
     ALTER USER 'root'@'%' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';
-    DROP USER 'root'@'localhost';FLUSH PRIVILEGES;
     GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
     FLUSH PRIVILEGES;
 
@@ -16,7 +17,12 @@ data:
     CREATE USER IF NOT EXISTS 'repl'@'%' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_REPLICATION_PASSWORD}';
     ALTER USER 'repl'@'%' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_REPLICATION_PASSWORD}';          
     GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+    ALTER USER 'repl'@'%' REQUIRE SSL;
     FLUSH PRIVILEGES;
+    -- Create 'sports_db' database if not exists
+    CREATE DATABASE IF NOT EXISTS sports_db
+      CHARACTER SET utf8mb4
+      COLLATE utf8mb4_unicode_ci;
 
   init-replication.sql: |
     SET GLOBAL super_read_only = 0;
@@ -30,7 +36,8 @@ data:
     -- Alter 'root' user if needed
     CREATE USER IF NOT EXISTS  'root'@'%' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';
     ALTER USER 'root'@'%' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';
-    DROP USER 'root'@'localhost';FLUSH PRIVILEGES;
+    CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_ROOT_PASSWORD}';  
     GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
     FLUSH PRIVILEGES;
 
@@ -43,8 +50,14 @@ data:
     SOURCE_USER='repl',
     SOURCE_PASSWORD='${MYSQL_REPLICATION_PASSWORD}',
     SOURCE_SSL=1,
-    SOURCE_SSL_CA = '/etc/mysql/ssl/ca-cert.pem',
-    SOURCE_SSL_CERT = '/etc/mysql/ssl/server-cert.pem',
-    SOURCE_SSL_KEY = '/etc/mysql/ssl/server-key.pem';
+    SOURCE_SSL_CA = '/var/lib/mysql-ssl/ca-cert.pem',
+    SOURCE_SSL_CERT = '/var/lib/mysql-ssl/server-cert.pem',
+    SOURCE_SSL_KEY = '/var/lib/mysql-ssl/server-key.pem',
+    SOURCE_CONNECT_RETRY=60,
+    SOURCE_RETRY_COUNT=86400;
     START REPLICA;
+    SELECT SLEEP(5);
+    SHOW REPLICA STATUS\G
     SET GLOBAL super_read_only = 1;
+
+
